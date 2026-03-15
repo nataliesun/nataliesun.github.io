@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTV Ad Pod Auction Simulator ✦ Natalie Sun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Syne:wght@400;500;600;700;800&family=Fredoka+One&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --red: #E50914; --red-soft: rgba(229,9,20,0.10); --red-softer: rgba(229,9,20,0.06);
+    --green: #059669; --green-bg: rgba(5,150,105,0.10);
+    --amber: #B45309; --amber-bg: rgba(251,191,36,0.12);
+    --blue: #185FA5; --blue-bg: rgba(24,95,165,0.10);
+    --mono: 'IBM Plex Mono', monospace; --sans: 'Syne', sans-serif;
+    --bg: #0a0a0b; --surface: #111113; --surface2: #18181b; --surface3: #1f1f23;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f0; --text2: #8a8a96; --text3: #555560;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; line-height: 1; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: .6;
+  }
+  /* ─── Portfolio nav ─── */
+  .portfolio-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #FFFDF8; border-bottom: 3px solid #9B84CC;
+    padding: .85rem 2rem; display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 0 #C4A8E0;
+  }
+  .portfolio-nav-logo { font-family: 'Fredoka One', cursive; font-size: 18px; color: #9B84CC; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+  .portfolio-nav-star { color: #F4956A; animation: pnspin 4s linear infinite; display: inline-block; }
+  @keyframes pnspin { to { transform: rotate(360deg); } }
+  .portfolio-nav-back { font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 800; color: #6B5C8A; text-decoration: none; padding: 4px 14px; border-radius: 20px; border: 2px solid #C8B8E8; transition: all .2s; }
+  .portfolio-nav-back:hover { background: #C8B8E8; color: #3A2E5C; }
+
+  /* ─── Hero ─── */
+  .hero {
+    padding: 4rem 2rem 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border2), transparent);
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 10px; color: var(--text2);
+    letter-spacing: .12em; margin-bottom: 1.25rem;
+    border: 0.5px solid var(--border); border-radius: 20px;
+    padding: 5px 14px;
+  }
+  .hero-eyebrow::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--red); display: inline-block;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 52px); font-weight: 800;
+    line-height: 1.05; letter-spacing: -.02em;
+    color: var(--text);
+    margin-bottom: .75rem;
+  }
+  .hero h1 em {
+    font-style: normal; color: var(--red);
+  }
+  .hero-sub {
+    font-size: 15px; color: var(--text2); max-width: 540px;
+    margin: 0 auto 2rem; line-height: 1.7;
+  }
+  .hero-chips { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    font-family: var(--mono); font-size: 10px;
+    padding: 4px 10px; border-radius: 4px;
+    background: var(--surface2); color: var(--text2);
+    border: 0.5px solid var(--border);
+  }
+
+  /* ─── Main layout ─── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 2rem; position: relative; z-index: 1; }
+
+  /* ─── Controls bar ─── */
+  .controls-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 1rem; flex-wrap: wrap;
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: .9rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .ctrl-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ctrl-lbl { font-family: var(--mono); font-size: 10px; color: var(--text2); letter-spacing: .05em; }
+  select {
+    font-family: var(--mono); font-size: 11px;
+    padding: 5px 10px; border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border2);
+    background: var(--surface2); color: var(--text);
+    cursor: pointer; outline: none;
+    transition: border-color .15s;
+  }
+  select:hover { border-color: rgba(255,255,255,.25); }
+  .btn {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 7px 18px; border-radius: var(--radius-sm);
+    border: none; cursor: pointer; letter-spacing: .03em;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--red); color: #fff; }
+  .btn-primary:hover { opacity: .88; }
+  .btn-primary:disabled { opacity: .3; cursor: default; transform: none; }
+  .btn-ghost {
+    background: transparent; color: var(--text2);
+    border: 0.5px solid var(--border2);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,.25); }
+
+  /* ─── Metrics ─── */
+  .metrics-grid {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px; margin-bottom: 1.25rem;
+  }
+  .metric-card {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: .9rem 1.1rem;
+  }
+  .metric-val {
+    font-family: var(--mono); font-size: 22px; font-weight: 500;
+    color: var(--text); line-height: 1;
+  }
+  .metric-lbl { font-size: 11px; color: var(--text2); margin-top: 5px; }
+
+  /* ─── Timeline ─── */
+  .timeline {
+    display: flex; border: 0.5px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem;
+  }
+  .tl-phase {
+    flex: 1; padding: .55rem .75rem; text-align: center;
+    border-right: 0.5px solid var(--border);
+    transition: background .2s;
+  }
+  .tl-phase:last-child { border-right: none; }
+  .tl-name { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: .08em; }
+  .tl-ms { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--text2); margin-top: 2px; }
+  .tl-phase.active { background: var(--red-soft); }
+  .tl-phase.active .tl-name { color: var(--red); }
+  .tl-phase.active .tl-ms { color: var(--red); }
+  .tl-phase.done { background: var(--green-bg); }
+  .tl-phase.done .tl-ms { color: var(--green); }
+
+  /* ─── Two col ─── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+
+  /* ─── Panel ─── */
+  .panel {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 1.1rem;
+  }
+  .panel + .panel { margin-top: 1rem; }
+  .panel-hdr {
+    font-family: var(--mono); font-size: 10px; color: var(--text2);
+    letter-spacing: .08em; margin-bottom: .85rem;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .panel-hdr span { color: var(--text); font-weight: 500; }
+
+  /* ─── Pod slots ─── */
+  .pod-slots { display: flex; flex-direction: column; gap: 7px; }
+  .slot {
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: .65rem .85rem;
+    transition: border-color .25s, background .25s;
+  }
+  .slot.pending { background: var(--surface2); }
+  .slot.auctioning { border-color: var(--amber); background: var(--amber-bg); animation: pulse .7s ease-in-out infinite alternate; }
+  .slot.filled { border-color: var(--green); background: var(--green-bg); }
+  .slot.no-fill { border-color: var(--border); opacity: .45; }
+  @keyframes pulse { from { opacity: .65 } to { opacity: 1 } }
+  .slot-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .slot-id { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--text2); }
+  .slot-dur { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+  .slot-winner { font-size: 12px; font-weight: 600; color: var(--green); }
+  .slot-price { font-family: var(--mono); font-size: 11px; color: var(--green); }
+  .slot-status { font-family: var(--mono); font-size: 10px; color: var(--amber); }
+  .slot-empty { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+  /* ─── Bid log ─── */
+  .bid-log { display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto; }
+  .bid-log::-webkit-scrollbar { width: 4px; }
+  .bid-log::-webkit-scrollbar-track { background: transparent; }
+  .bid-log::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .bid-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 8px; border-radius: var(--radius-sm);
+    background: var(--surface2); border: 0.5px solid transparent;
+  }
+  .bid-row.winner { background: var(--green-bg); border-color: rgba(5,150,105,.2); }
+  .bid-row.nobid { opacity: .35; }
+  .dsp-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .bid-dsp { font-family: var(--mono); font-size: 10px; color: var(--text); min-width: 100px; }
+  .bid-slot-tag {
+    font-family: var(--mono); font-size: 9px; padding: 2px 5px;
+    background: var(--surface3); border-radius: 3px; color: var(--text2);
+  }
+  .bid-amt { font-family: var(--mono); font-size: 11px; font-weight: 500; margin-left: auto; }
+  .bid-amt.won { color: var(--green); }
+  .bid-amt.no { color: var(--text3); }
+  .win-badge {
+    font-family: var(--mono); font-size: 9px;
+    background: var(--green-bg); color: var(--green);
+    padding: 1px 5px; border-radius: 3px; margin-left: 5px;
+  }
+
+  /* ─── DSP table ─── */
+  .dsp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .dsp-table th {
+    font-family: var(--mono); font-size: 9px; color: var(--text3);
+    text-align: left; padding: 4px 6px;
+    border-bottom: 0.5px solid var(--border);
+    font-weight: 400; letter-spacing: .05em;
+  }
+  .dsp-table td { padding: 6px 6px; border-bottom: 0.5px solid var(--border); color: var(--text); }
+  .dsp-table tr:last-child td { border-bottom: none; }
+  .dsp-name { display: flex; align-items: center; gap: 7px; font-weight: 500; font-size: 12px; }
+  .mini-bar-bg { background: var(--surface3); border-radius: 3px; height: 4px; width: 100%; min-width: 60px; }
+  .mini-bar { height: 4px; border-radius: 3px; transition: width .5s ease; }
+  .tally-chip { font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 3px; }
+  .tally-win { background: var(--green-bg); color: var(--green); }
+  .tally-zero { background: var(--surface3); color: var(--text3); }
+
+  /* ─── Params ─── */
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .param-item {}
+  .param-lbl { font-family: var(--mono); font-size: 10px; color: var(--text2); margin-bottom: 6px; }
+  .param-row { display: flex; align-items: center; gap: 10px; }
+  .param-row input[type=range] {
+    flex: 1; -webkit-appearance: none; height: 3px;
+    background: var(--surface3); border-radius: 2px; cursor: pointer; outline: none;
+  }
+  .param-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--red); cursor: pointer;
+    transition: transform .1s;
+  }
+  .param-row input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  .param-num { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text); min-width: 44px; text-align: right; }
+
+  /* ─── Request box ─── */
+  .req-box {
+    background: var(--surface2); border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border);
+    padding: .85rem; font-family: var(--mono); font-size: 10px;
+    color: var(--text2); line-height: 1.75; max-height: 155px;
+    overflow-y: auto; white-space: pre;
+  }
+  .req-box::-webkit-scrollbar { width: 3px; }
+  .req-box::-webkit-scrollbar-thumb { background: var(--border2); }
+  .req-key { color: #7dd3fc; }
+  .req-str { color: #86efac; }
+  .req-num { color: #fbbf24; }
+
+  /* ─── Empty state ─── */
+  .empty-state { text-align: center; padding: 1.75rem 1rem; color: var(--text3); font-size: 12px; }
+  .empty-icon { font-size: 20px; margin-bottom: .5rem; opacity: .5; }
+
+  /* ─── Footer ─── */
+  footer {
+    margin-top: 3rem;
+    padding: 1.5rem 2rem;
+    border-top: 0.5px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .footer-left { font-family: var(--mono); font-size: 10px; color: var(--text3); line-height: 1.7; }
+  .footer-right { display: flex; gap: 8px; flex-wrap: wrap; }
+  .footer-chip {
+    font-family: var(--mono); font-size: 9px;
+    padding: 3px 8px; border-radius: 4px;
+    background: var(--surface2); color: var(--text3);
+    border: 0.5px solid var(--border);
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 720px) {
+    .two-col { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .param-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 28px; }
+    .hero { padding: 2.5rem 1.25rem 2rem; }
+    .main { padding: 1rem 1.25rem; }
+    nav { padding: .75rem 1.25rem; }
+    .timeline { flex-wrap: wrap; }
+    .tl-phase { min-width: 33%; border-right: none; border-bottom: 0.5px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<nav class="portfolio-nav">
+  <a href="portfolio.html" class="portfolio-nav-logo"><span class="portfolio-nav-star">✦</span> Natalie Sun</a>
+  <a href="portfolio.html" class="portfolio-nav-back">← Back to portfolio</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">Portfolio Project · Connected TV</div>
+  <h1>Real-time <em>ad auction</em><br>for Connected TV</h1>
+  <p class="hero-sub">A working simulation of the OpenRTB 2.6 bid-request/response cycle as it runs inside a CTV ad pod — complete with floor pricing, competitive separation, DSP timeout windows, and second-price clearing logic.</p>
+  <div class="hero-chips">
+    <div class="chip">OpenRTB 2.6</div>
+    <div class="chip">VAST 4.2</div>
+    <div class="chip">Second-price auction</div>
+    <div class="chip">Competitive separation</div>
+    <div class="chip">Floor price enforcement</div>
+    <div class="chip">CTV pod management</div>
+    <div class="chip">&lt;100ms latency target</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Controls -->
+  <div class="controls-bar">
+    <div class="ctrl-group">
+      <span class="ctrl-lbl">GENRE</span>
+      <select id="genre-sel">
+        <option value="drama">Drama (premium)</option>
+        <option value="comedy">Comedy</option>
+        <option value="action">Action</option>
+        <option value="docuseries">Docuseries</option>
+        <option value="kids">Kids (COPPA)</option>
+      </select>
+      <span class="ctrl-lbl">POD SLOTS</span>
+      <select id="slots-sel">
+        <option value="3">3 slots</option>
+        <option value="4" selected>4 slots</option>
+        <option value="5">5 slots</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
+      <button class="btn btn-primary" id="run-btn" onclick="runAuction()">▶ Run auction</button>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-val" id="m-fillrate">—</div>
+      <div class="metric-lbl">fill rate</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-val" id="m-cpm">—</div>
+      <div class="metric-lbl">avg clearing CPM</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-val" id="m-latency">—</div>
+      <div class="metric-lbl">auction latency</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-val" id="m-bids">—</div>
+      <div class="metric-lbl">valid bids received</div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline">
+    <div class="tl-phase" id="ph-br">
+      <div class="tl-name">BID REQUEST</div>
+      <div class="tl-ms" id="ph-br-ms">—</div>
+    </div>
+    <div class="tl-phase" id="ph-tout">
+      <div class="tl-name">DSP TIMEOUT</div>
+      <div class="tl-ms" id="ph-tout-ms">100ms</div>
+    </div>
+    <div class="tl-phase" id="ph-eval">
+      <div class="tl-name">BID EVAL</div>
+      <div class="tl-ms" id="ph-eval-ms">—</div>
+    </div>
+    <div class="tl-phase" id="ph-win">
+      <div class="tl-name">WIN NOTICE</div>
+      <div class="tl-ms" id="ph-win-ms">—</div>
+    </div>
+    <div class="tl-phase" id="ph-serve">
+      <div class="tl-name">AD SERVE</div>
+      <div class="tl-ms" id="ph-serve-ms">—</div>
+    </div>
+  </div>
+
+  <!-- Pod + Bid log -->
+  <div class="two-col">
+    <div>
+      <div class="panel">
+        <div class="panel-hdr">AD POD — <span id="pod-label">4 SLOTS · 2 MIN BREAK</span></div>
+        <div class="pod-slots" id="pod-slots"></div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="panel-hdr">BID STREAM <span id="bid-count"></span></div>
+        <div class="bid-log" id="bid-log">
+          <div class="empty-state">
+            <div class="empty-icon">◎</div>
+            Awaiting auction…
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DSP table + Params -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-hdr">DSP SCORECARD</div>
+      <table class="dsp-table">
+        <thead>
+          <tr>
+            <th>DSP</th>
+            <th>BASE CPM</th>
+            <th>BID RATE</th>
+            <th>WINS</th>
+            <th>AVG CPM</th>
+          </tr>
+        </thead>
+        <tbody id="dsp-tbody"></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr">AUCTION PARAMETERS</div>
+      <div class="param-grid">
+        <div class="param-item">
+          <div class="param-lbl">floor price (CPM)</div>
+          <div class="param-row">
+            <input type="range" id="floor-slider" min="5" max="40" value="15" step="1"
+              oninput="document.getElementById('floor-num').textContent='$'+this.value">
+            <div class="param-num" id="floor-num">$15</div>
+          </div>
+        </div>
+        <div class="param-item">
+          <div class="param-lbl">DSP timeout (ms)</div>
+          <div class="param-row">
+            <input type="range" id="timeout-slider" min="50" max="200" value="100" step="10"
+              oninput="updateTimeout(this.value)">
+            <div class="param-num" id="timeout-num">100ms</div>
+          </div>
+        </div>
+        <div class="param-item">
+          <div class="param-lbl">active DSPs</div>
+          <div class="param-row">
+            <input type="range" id="dsp-slider" min="2" max="7" value="5" step="1"
+              oninput="document.getElementById('dsp-num').textContent=this.value; rebuildDspTable()">
+            <div class="param-num" id="dsp-num">5</div>
+          </div>
+        </div>
+        <div class="param-item">
+          <div class="param-lbl">competitive sep.</div>
+          <div class="param-row">
+            <input type="range" id="sep-slider" min="0" max="2" value="1" step="1"
+              oninput="document.getElementById('sep-num').textContent=['off','industry','strict'][+this.value]">
+            <div class="param-num" id="sep-num">industry</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-hdr" style="margin-top:1.1rem;">SAMPLE BID REQUEST (OpenRTB 2.6)</div>
+      <div class="req-box" id="req-box"><span style="color:var(--text3)">// run an auction to generate bid request</span></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<footer>
+  <div class="footer-left">
+    Natalie Sun · Portfolio Project<br>
+    Simulates OpenRTB 2.6 second-price sealed-bid auction for CTV ad pods.
+  </div>
+  <div class="footer-right">
+    <div class="footer-chip">OpenRTB 2.6</div>
+    <div class="footer-chip">VAST 4.2</div>
+    <div class="footer-chip">IAB CTV Standards</div>
+    <div class="footer-chip">Built with Vanilla JS</div>
+  </div>
+</footer>
+
+<script>
+const DSP_POOL = [
+  {name:'The Trade Desk', color:'#378ADD', cat:'auto',    bidRate:.82, cpmBase:28, cpmVar:14},
+  {name:'Google DV360',   color:'#EA4335', cat:'cpg',     bidRate:.76, cpmBase:22, cpmVar:10},
+  {name:'Amazon DSP',     color:'#FF9900', cat:'retail',  bidRate:.88, cpmBase:31, cpmVar:12},
+  {name:'Xandr',          color:'#00A8E0', cat:'finance', bidRate:.65, cpmBase:19, cpmVar:9},
+  {name:'MediaMath',      color:'#7C3AED', cat:'tech',    bidRate:.71, cpmBase:24, cpmVar:11},
+  {name:'Yahoo DSP',      color:'#6001D2', cat:'telecom', bidRate:.60, cpmBase:17, cpmVar:8},
+  {name:'Basis DSP',      color:'#059669', cat:'health',  bidRate:.55, cpmBase:20, cpmVar:10},
+];
+
+const GENRE_MULT = {drama:1.4, comedy:1.1, action:1.2, docuseries:1.15, kids:.65};
+
+let scorecard = {};
+let auctionRunning = false;
+
+const r = (lo, hi) => lo + Math.random() * (hi - lo);
+const fmt = n => n.toFixed(2);
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
+function updateTimeout(v) {
+  document.getElementById('timeout-num').textContent = v + 'ms';
+  document.getElementById('ph-tout-ms').textContent = v + 'ms';
+}
+
+function getDsps() {
+  return DSP_POOL.slice(0, +document.getElementById('dsp-slider').value);
+}
+
+function rebuildDspTable() {
+  const dsps = getDsps();
+  const tbody = document.getElementById('dsp-tbody');
+  tbody.innerHTML = '';
+  dsps.forEach(d => {
+    const sc = scorecard[d.name] || {wins:0, bids:0, totalCpm:0};
+    const avgCpm = sc.bids > 0 ? (sc.totalCpm / sc.bids).toFixed(1) : '—';
+    const bidPct = Math.round(d.bidRate * 100);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="dsp-name">
+        <div class="dsp-dot" style="background:${d.color}"></div>${d.name}
+      </div></td>
+      <td style="font-family:var(--mono);font-size:11px;">$${d.cpmBase}</td>
+      <td style="min-width:100px;">
+        <div class="mini-bar-bg"><div class="mini-bar" style="width:${bidPct}%;background:${d.color}"></div></div>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--text2)">${bidPct}%</span>
+      </td>
+      <td><span class="tally-chip ${sc.wins > 0 ? 'tally-win' : 'tally-zero'}">${sc.wins}</span></td>
+      <td style="font-family:var(--mono);font-size:11px;">${avgCpm !== '—' ? '$' + avgCpm : '—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildSlots() {
+  const count = +document.getElementById('slots-sel').value;
+  const durs = [15, 30, 15, 30, 15].slice(0, count);
+  const totalSec = durs.reduce((a, b) => a + b, 0);
+  const mins = (totalSec / 60).toFixed(1).replace('.0','');
+  document.getElementById('pod-label').textContent = `${count} SLOTS · ${mins} MIN BREAK`;
+  const container = document.getElementById('pod-slots');
+  container.innerHTML = '';
+  return durs.map((dur, i) => {
+    const el = document.createElement('div');
+    el.className = 'slot pending';
+    el.id = 'slot-' + i;
+    el.innerHTML = `
+      <div class="slot-head">
+        <span class="slot-id">SLOT ${i + 1}</span>
+        <span class="slot-dur">${dur}s · :${(15 + durs.slice(0,i).reduce((a,b)=>a+b,0)).toString().padStart(2,'0')}</span>
+      </div>
+      <div class="slot-empty" id="slot-content-${i}">awaiting auction…</div>
+    `;
+    container.appendChild(el);
+    return {id: i, dur};
+  });
+}
+
+function colorize(json) {
+  return json
+    .replace(/"([^"]+)":/g, '<span class="req-key">"$1"</span>:')
+    .replace(/: "([^"]+)"/g, ': <span class="req-str">"$1"</span>')
+    .replace(/: (\d+\.?\d*)/g, ': <span class="req-num">$1</span>');
+}
+
+function buildBidRequest(slots, floor, genre) {
+  const tmax = document.getElementById('timeout-slider').value;
+  const imp = slots.map((s, i) =>
+    `    {"id":"imp${i+1}","video":{"mimes":["video/mp4"],"minduration":${s.dur},"maxduration":${s.dur},"protocols":[2,3,5],"w":3840,"h":2160,"placement":1},"bidfloor":${floor},"bidfloorcur":"USD"}`
+  ).join(',\n');
+  return `{
+  "id": "nr-${Math.random().toString(36).slice(2,10)}",
+  "imp": [\n${imp}\n  ],
+  "site": {
+    "page": "netflix.com/watch",
+    "content": {"genre": "${genre}", "livestream": 0}
+  },
+  "device": {
+    "devicetype": 3,
+    "ua": "Netflix/CTV SmartTV",
+    "w": 3840, "h": 2160
+  },
+  "user": {"id": "hashed-uid-x7f2a", "yob": 1988},
+  "at": 2,
+  "tmax": ${tmax},
+  "cur": ["USD"],
+  "ext": {
+    "ctv": true,
+    "podtype": "MID_ROLL",
+    "podid": "pod-${Math.random().toString(36).slice(2,6)}"
+  }
+}`;
+}
+
+function activatePhase(id, done = false) {
+  document.querySelectorAll('.tl-phase').forEach(el => {
+    el.classList.remove('active');
+    if (done) el.classList.add('done');
+  });
+  if (!done) {
+    document.getElementById(id).classList.remove('done');
+    document.getElementById(id).classList.add('active');
+  }
+}
+
+function setPhase(id, ms, isDone = false) {
+  const el = document.getElementById(id);
+  el.classList.remove('active', 'done');
+  if (isDone) el.classList.add('done');
+  else el.classList.add('active');
+  document.getElementById(id + '-ms').textContent = ms;
+}
+
+async function runAuction() {
+  if (auctionRunning) return;
+  auctionRunning = true;
+  document.getElementById('run-btn').disabled = true;
+
+  const dsps = getDsps();
+  const slots = buildSlots();
+  const floor = +document.getElementById('floor-slider').value;
+  const genre = document.getElementById('genre-sel').value;
+  const genreMult = GENRE_MULT[genre] || 1.0;
+  const sep = +document.getElementById('sep-slider').value;
+
+  document.getElementById('bid-log').innerHTML = '';
+  document.getElementById('bid-count').textContent = '';
+
+  // Bid request
+  const reqJson = buildBidRequest(slots, floor, genre);
+  document.getElementById('req-box').innerHTML = colorize(reqJson);
+
+  const t0 = performance.now();
+  setPhase('ph-br', '0ms');
+  await delay(280);
+
+  setPhase('ph-tout', document.getElementById('timeout-slider').value + 'ms');
+  let totalValidBids = 0;
+  let allBids = [];
+  let usedCats = new Set();
+
+  for (let si = 0; si < slots.length; si++) {
+    const slot = slots[si];
+    const slotEl = document.getElementById('slot-' + si);
+    slotEl.className = 'slot auctioning';
+    document.getElementById('slot-content-' + si).innerHTML = '<span class="slot-status">● auctioning…</span>';
+
+    let slotBids = [];
+
+    for (const dsp of dsps) {
+      await delay(15 + Math.random() * 28);
+      const bids = Math.random() < dsp.bidRate;
+      let bidCpm = null;
+
+      if (bids) {
+        bidCpm = (dsp.cpmBase + r(-dsp.cpmVar / 2, dsp.cpmVar)) * genreMult;
+        if (bidCpm < floor) bidCpm = null;
+        if (bidCpm !== null && sep > 0 && usedCats.has(dsp.cat)) bidCpm = null;
+      }
+
+      const row = document.createElement('div');
+      row.className = 'bid-row' + (bidCpm === null ? ' nobid' : '');
+      row.id = `bid-${si}-${dsp.name.replace(/\s/g,'')}`;
+      row.innerHTML = `
+        <div class="dsp-dot" style="background:${dsp.color}"></div>
+        <div class="bid-dsp">${dsp.name}</div>
+        <div class="bid-slot-tag">S${si + 1}</div>
+        <div class="bid-amt ${bidCpm !== null ? 'won' : 'no'}">${bidCpm !== null ? '$' + fmt(bidCpm) : 'no bid'}</div>
+      `;
+      document.getElementById('bid-log').appendChild(row);
+      document.getElementById('bid-log').scrollTop = 9999;
+
+      if (bidCpm !== null) {
+        totalValidBids++;
+        slotBids.push({dsp, cpm: bidCpm, rowId: row.id});
+        if (!scorecard[dsp.name]) scorecard[dsp.name] = {wins:0, bids:0, totalCpm:0};
+        scorecard[dsp.name].bids++;
+        scorecard[dsp.name].totalCpm += bidCpm;
+      }
+      allBids.push({dsp, cpm: bidCpm, slot: si});
+    }
+
+    setPhase('ph-eval', Math.round(performance.now() - t0) + 'ms');
+    await delay(70);
+
+    if (slotBids.length > 0) {
+      slotBids.sort((a, b) => b.cpm - a.cpm);
+      const winner = slotBids[0];
+      const clearPrice = slotBids.length > 1 ? slotBids[1].cpm + 0.01 : floor + 0.01;
+      usedCats.add(winner.dsp.cat);
+      if (!scorecard[winner.dsp.name]) scorecard[winner.dsp.name] = {wins:0, bids:0, totalCpm:0};
+      scorecard[winner.dsp.name].wins++;
+
+      slotEl.className = 'slot filled';
+      document.getElementById('slot-content-' + si).innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="slot-winner">${winner.dsp.name}</span>
+          <span class="slot-price">$${fmt(clearPrice)} CPM</span>
+        </div>`;
+
+      // Mark winner row
+      const winRow = document.getElementById(winner.rowId);
+      if (winRow) {
+        winRow.classList.add('winner');
+        const amtEl = winRow.querySelector('.bid-amt');
+        if (amtEl) amtEl.innerHTML += '<span class="win-badge">WON</span>';
+      }
+    } else {
+      slotEl.className = 'slot no-fill';
+      document.getElementById('slot-content-' + si).innerHTML = '<span class="slot-empty">no fill — below floor</span>';
+    }
+    await delay(35);
+  }
+
+  // Final timing
+  const latency = Math.round(performance.now() - t0);
+  setPhase('ph-win', latency + 'ms');
+  await delay(60);
+  const serveMs = latency + Math.round(r(18, 42));
+  setPhase('ph-serve', serveMs + 'ms');
+
+  // Metrics
+  const filledCount = document.querySelectorAll('.slot.filled').length;
+  const fillRate = Math.round(filledCount / slots.length * 100);
+  const validBidsWithCpm = allBids.filter(b => b.cpm !== null);
+  const avgCpm = validBidsWithCpm.length > 0 ? validBidsWithCpm.reduce((s, b) => s + b.cpm, 0) / validBidsWithCpm.length : 0;
+
+  document.getElementById('m-fillrate').textContent = fillRate + '%';
+  document.getElementById('m-cpm').textContent = '$' + fmt(avgCpm);
+  document.getElementById('m-latency').textContent = latency + 'ms';
+  document.getElementById('m-bids').textContent = totalValidBids;
+  document.getElementById('bid-count').textContent = totalValidBids + ' bids';
+  document.getElementById('ph-br-ms').textContent = '0ms';
+
+  rebuildDspTable();
+  auctionRunning = false;
+  document.getElementById('run-btn').disabled = false;
+}
+
+function resetAll() {
+  if (auctionRunning) return;
+  scorecard = {};
+  ['m-fillrate','m-cpm','m-latency','m-bids'].forEach(id => document.getElementById(id).textContent = '—');
+  document.getElementById('bid-log').innerHTML = '<div class="empty-state"><div class="empty-icon">◎</div>Awaiting auction…</div>';
+  document.getElementById('bid-count').textContent = '';
+  document.getElementById('req-box').innerHTML = '<span style="color:var(--text3)">// run an auction to generate bid request</span>';
+  document.querySelectorAll('.tl-phase').forEach(el => el.classList.remove('active','done'));
+  document.getElementById('ph-tout-ms').textContent = document.getElementById('timeout-slider').value + 'ms';
+  ['ph-br-ms','ph-eval-ms','ph-win-ms','ph-serve-ms'].forEach(id => document.getElementById(id).textContent = '—');
+  buildSlots();
+  rebuildDspTable();
+}
+
+// Init
+buildSlots();
+rebuildDspTable();
+</script>
+</body>
+</html>
