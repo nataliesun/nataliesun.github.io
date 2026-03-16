@@ -30,7 +30,16 @@ body::before{
   word-break:break-all;line-height:2.6;letter-spacing:1.5em;pointer-events:none;z-index:0;
 }
 
-/* ── SLIDER WRAPPER ── */
+/* ── ANIMATED BG VECTORS ── */
+.bg-vectors{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bv{position:absolute;opacity:0;animation:bvFloat linear infinite}
+@keyframes bvFloat{
+  0%  {transform:translateY(100vh) rotate(0deg);   opacity:0}
+  5%  {opacity:1}
+  95% {opacity:1}
+  100%{transform:translateY(-120px) rotate(360deg);opacity:0}
+}
+
 .slider{position:fixed;inset:0;z-index:1}
 .slides{display:flex;width:500%;height:100%;transition:transform .65s cubic-bezier(.77,0,.18,1)}
 .slide{width:20%;height:100%;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:2rem;position:relative;overflow:hidden}
@@ -194,6 +203,9 @@ body::before{
 </style>
 </head>
 <body>
+
+<!-- animated bg vectors -->
+<div class="bg-vectors" id="bgVectors"></div>
 
 <!-- progress bar -->
 <div class="progress" id="progress"></div>
@@ -390,6 +402,78 @@ body::before{
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+
+  // ── BACKGROUND VECTORS ──
+  const svgs = [
+    // 4-point star
+    `<svg width="22" height="22" viewBox="0 0 22 22"><path d="M11 0 L12.8 8.2 L22 11 L12.8 13.8 L11 22 L9.2 13.8 L0 11 L9.2 8.2Z" fill="FILL"/></svg>`,
+    // 6-point sparkle
+    `<svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 0 L11.2 7.5 L18 4 L13.5 10 L20 10 L13.5 11.5 L18 17 L11.2 13.5 L10 20 L8.8 13.5 L2 17 L6.5 11.5 L0 10 L6.5 10 L2 4 L8.8 7.5Z" fill="FILL" opacity="0.85"/></svg>`,
+    // heart
+    `<svg width="20" height="18" viewBox="0 0 20 18"><path d="M10 17 C10 17 1 11 1 5.5 C1 2.9 3.1 1 5.5 1 C7.2 1 8.7 2 10 3.5 C11.3 2 12.8 1 14.5 1 C16.9 1 19 2.9 19 5.5 C19 11 10 17 10 17Z" fill="FILL"/></svg>`,
+    // circle
+    `<svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="FILL" stroke-width="2.5"/></svg>`,
+    // cloud puff
+    `<svg width="32" height="20" viewBox="0 0 32 20"><ellipse cx="16" cy="14" rx="14" ry="6" fill="FILL"/><ellipse cx="10" cy="11" rx="7" ry="6" fill="FILL"/><ellipse cx="22" cy="11" rx="6" ry="5" fill="FILL"/><ellipse cx="16" cy="9" rx="8" ry="6" fill="FILL"/></svg>`,
+    // diamond
+    `<svg width="16" height="20" viewBox="0 0 16 20"><path d="M8 0 L16 8 L8 20 L0 8Z" fill="FILL" opacity="0.8"/></svg>`,
+    // flower
+    `<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="6"  r="4" fill="FILL"/><circle cx="11" cy="16" r="4" fill="FILL"/><circle cx="6"  cy="11" r="4" fill="FILL"/><circle cx="16" cy="11" r="4" fill="FILL"/><circle cx="11" cy="11" r="4" fill="FILLD"/></svg>`,
+    // moon
+    `<svg width="18" height="20" viewBox="0 0 18 20"><path d="M15 17 A9 9 0 1 1 5 3 A7 7 0 0 0 15 17Z" fill="FILL"/></svg>`,
+  ];
+
+  const colors = [
+    {f:'#C8B8E8', d:'#9B84CC'},
+    {f:'#A8E6C8', d:'#5DC99A'},
+    {f:'#FFCBA4', d:'#F4956A'},
+    {f:'#FFB3D1', d:'#E8709A'},
+    {f:'#FFF0A0', d:'#F0C84A'},
+    {f:'#B8E4F8', d:'#5BB8E8'},
+  ];
+
+  const container = document.getElementById('bgVectors');
+
+  function spawnVector() {
+    const svg = svgs[Math.floor(Math.random() * svgs.length)];
+    const col = colors[Math.floor(Math.random() * colors.length)];
+    const el  = document.createElement('div');
+    el.className = 'bv';
+    const scale  = 0.7 + Math.random() * 1.6;
+    const dur    = 9 + Math.random() * 14;
+    const delay  = Math.random() * -dur;
+    const left   = Math.random() * 98;
+    const sway   = (Math.random() - 0.5) * 120;
+
+    el.style.cssText = `
+      left:${left}%;
+      transform-origin:center;
+      width:fit-content;
+      animation-duration:${dur}s;
+      animation-delay:${delay}s;
+      filter: drop-shadow(0 0 3px ${col.f});
+    `;
+    el.style.transform = `scale(${scale})`;
+
+    // add horizontal sway via a nested wrapper
+    el.innerHTML = `<div style="animation:sway ${3+Math.random()*4}s ease-in-out infinite alternate;transform:translateX(0)">
+      ${svg.replace(/FILLD/g, col.d).replace(/FILL/g, col.f)}
+    </div>`;
+
+    container.appendChild(el);
+    setTimeout(() => el.remove(), (dur + Math.abs(delay)) * 1000 + 500);
+  }
+
+  // add sway keyframe
+  const swayStyle = document.createElement('style');
+  swayStyle.textContent = `@keyframes sway{from{transform:translateX(-30px)}to{transform:translateX(30px)}}`;
+  document.head.appendChild(swayStyle);
+
+  // spawn 18 immediately staggered, then every 600ms
+  for (let i = 0; i < 18; i++) setTimeout(spawnVector, i * 300);
+  setInterval(spawnVector, 600);
+
+
   let current = 0;
   const total = 5;
   const slidesEl = document.getElementById('slides');
